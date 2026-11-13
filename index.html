@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>C Snake Game</title>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      text-align: center;
+      font-family: Arial, sans-serif;
+      margin-top: 30px;
+    }
+    canvas {
+      background: #222;
+      border: 3px solid #444;
+      display: block;
+      margin: 15px auto;
+    }
+    #score { font-size: 22px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Snake Game</h2>
+  <div id="score">Score: 0</div>
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+  <p>Use <b>Arrow Keys</b> to steer | Press <b>Space</b> to Restart</p>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const CELL = 20;
+
+    // Listen to keyboard inputs and pass them into C
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp")    _setDirection(0);
+      if (e.key === "ArrowDown")  _setDirection(1);
+      if (e.key === "ArrowLeft")  _setDirection(2);
+      if (e.key === "ArrowRight") _setDirection(3);
+      if (e.key === " ")          _initGame();
+    });
+
+    // Emscripten triggers this function automatically once the C WASM engine is ready
+    var Module = {
+      onRuntimeInitialized: function() {
+        _initGame();
+
+        // Run one game tick every 120 milliseconds
+        setInterval(() => {
+          _stepGame();
+
+          // 1. Clear Canvas screen
+          ctx.fillStyle = "#222";
+          ctx.fillRect(0, 0, 400, 400);
+
+          // 2. Draw Food (reading coordinates from C)
+          ctx.fillStyle = "#ff4444";
+          ctx.fillRect(_getFoodX() * CELL, _getFoodY() * CELL, CELL - 2, CELL - 2);
+
+          // 3. Draw Snake (reading array elements from C)
+          ctx.fillStyle = "#00ff66";
+          const len = _getLength();
+          for (let i = 0; i < len; i++) {
+            ctx.fillRect(_getSnakeX(i) * CELL, _getSnakeY(i) * CELL, CELL - 2, CELL - 2);
+          }
+
+          // 4. Update Score text
+          document.getElementById("score").innerText = "Score: " + _getScore();
+
+          // 5. Game Over overlay
+          if (_getGameOver()) {
+            ctx.fillStyle = "white";
+            ctx.font = "24px Arial";
+            ctx.fillText("GAME OVER! Press Space", 60, 200);
+          }
+        }, 120);
+      }
+    };
+  </script>
+
+  <!-- Load the generated Emscripten file after Module is configured. -->
+  <script src="snake.js"></script>
+</body>
+</html>
